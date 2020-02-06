@@ -14,24 +14,30 @@ class QrCodeAnalyzer(
     private val onQrCodesDetected: (qrCodes: List<FirebaseVisionBarcode>) -> Unit
 ) : ImageAnalysis.Analyzer {
 
-    override fun analyze(image: ImageProxy, rotationDegrees: Int) {
-        val options = FirebaseVisionBarcodeDetectorOptions.Builder()
-            .setBarcodeFormats(FirebaseVisionBarcode.FORMAT_QR_CODE)
-            .build()
+    override fun analyze(image: ImageProxy) {
+        val mediaImage = image.image
+        if (mediaImage != null) {
+            val options = FirebaseVisionBarcodeDetectorOptions.Builder()
+                .setBarcodeFormats(FirebaseVisionBarcode.FORMAT_QR_CODE)
+                .build()
 
-        val detector = FirebaseVision.getInstance().getVisionBarcodeDetector(options)
+            val detector = FirebaseVision.getInstance().getVisionBarcodeDetector(options)
 
-        val rotation = rotationDegreesToFirebaseRotation(rotationDegrees)
-        val visionImage = FirebaseVisionImage.fromMediaImage(image.image!!, rotation)
+            val rotation = rotationDegreesToFirebaseRotation(image.imageInfo.rotationDegrees)
 
-        detector.detectInImage(visionImage)
-            .addOnSuccessListener { barcodes ->
-                onQrCodesDetected(barcodes)
-            }
-            .addOnFailureListener {
-                Log.e("QrCodeAnalyzer", "something went wrong", it)
-            }
+            val visionImage = FirebaseVisionImage.fromMediaImage(mediaImage, rotation)
 
+            detector.detectInImage(visionImage)
+                .addOnSuccessListener { barcodes ->
+                    onQrCodesDetected(barcodes)
+                }
+                .addOnFailureListener {
+                    Log.e("QrCodeAnalyzer", "something went wrong", it)
+                }
+                .addOnCompleteListener {
+                    image.close()
+                }
+        }
     }
 
     private fun rotationDegreesToFirebaseRotation(rotationDegrees: Int): Int {
